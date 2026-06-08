@@ -26,11 +26,18 @@ model, scaler, FITUR = load_artefak()
 
 # ---------- Header ----------
 st.title('📊 Web Prediksi Happiness Score')
-st.markdown('Masukkan nilai fitur di **sidebar** sebelah kiri, lalu klik **Prediksi**.')
+st.markdown('Masukkan informasi negara dan nilai fitur di **sidebar** sebelah kiri, lalu klik **Prediksi**.')
 st.divider()
 
 # ---------- Input di sidebar ----------
-st.sidebar.header('Input Fitur')
+st.sidebar.header('Informasi Data')
+# Input tambahan yang HANYA untuk tampilan (tidak masuk ke model)
+input_country = st.sidebar.text_input(label='Country (Negara)', value='Indonesia')
+input_year = st.sidebar.number_input(label='Year (Tahun)', min_value=2000, max_value=2100, value=2024, step=1)
+
+st.sidebar.divider()
+
+st.sidebar.header('Input Fitur Model')
 input_user = {}
 
 # Looping untuk membuat kolom input otomatis sesuai dengan fitur.pkl Anda
@@ -45,23 +52,29 @@ for f in FITUR:
 # ---------- Tombol prediksi ----------
 if st.sidebar.button('Prediksi', type='primary', use_container_width=True):
     try:
-        # Susun DataFrame sesuai urutan FITUR
-        nilai = pd.DataFrame([[input_user[f] for f in FITUR]], columns=FITUR)
+        # 1. Susun DataFrame KHUSUS FITUR MODEL (Tanpa Country & Year agar tidak error)
+        nilai_model = pd.DataFrame([[input_user[f] for f in FITUR]], columns=FITUR)
         
-        # Standarisasi (Scaling)
-        nilai_sc = scaler.transform(nilai)
+        # 2. Standarisasi (Scaling) hanya untuk fitur numerik
+        nilai_sc = scaler.transform(nilai_model)
         
-        # Lakukan Prediksi (Menebak Happiness Score)
+        # 3. Lakukan Prediksi
         pred = model.predict(nilai_sc)[0]
 
-        # Tampilkan hasil (Output diganti dari "usia" menjadi Happiness Score)
-        st.success(f'Hasil Prediksi **Happiness Score**: **{pred:,.4f}**')
+        # 4. Tampilkan hasil (Lebih interaktif dengan menyebutkan nama negara dan tahun)
+        st.success(f'Hasil Prediksi **Happiness Score** untuk **{input_country}** tahun **{input_year}**: **{pred:,.4f}**')
 
-        # Tampilkan input yang dipakai
+        # 5. Siapkan Data Lengkap (Country + Year + Fitur) untuk DITAMPILKAN di tabel UI
+        data_tampilan = {
+            'Country': input_country,
+            'Year': input_year
+        }
+        data_tampilan.update(input_user) # Menggabungkan input form negara dengan input nilai fitur
+
         st.subheader('Input yang Digunakan')
-        st.dataframe(pd.DataFrame([input_user]), use_container_width=True)
+        st.dataframe(pd.DataFrame([data_tampilan]), use_container_width=True)
 
-        # Tampilkan koefisien model
+        # 6. Tampilkan koefisien model
         st.subheader('Koefisien Model (Terstandarisasi)')
         df_koef = pd.DataFrame({
             'Fitur': FITUR,
@@ -73,8 +86,8 @@ if st.sidebar.button('Prediksi', type='primary', use_container_width=True):
     except Exception as e:
         st.error(f'Terjadi error saat memproses prediksi: {e}')
 else:
-    st.info('Isi nilai fitur di sidebar, lalu klik tombol Prediksi.')
+    st.info('Isi informasi negara dan nilai fitur di sidebar, lalu klik tombol Prediksi.')
 
 # ---------- Footer ----------
 st.divider()
-st.caption('Dibuat untuk PPKD Jakarta Selatan — Kejuruan Data Analyst')
+st.caption('Dibuat untuk Project Learning Based — Kejuruan Data Analyst')
